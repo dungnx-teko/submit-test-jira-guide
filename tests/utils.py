@@ -76,15 +76,22 @@ class JiraTestService():
 
 
 class JiraTest():
+    should_submit_test = False
     test_cycle_items = []
     test_services = JiraTestService(jira_settings)
 
     @pytest.fixture(autouse=True)
-    def get_test_result(self, request):
+    def update_test_result(self, request):
         yield
         self.test_result = 'Pass'
         if request.node.rep_call.failed:
             self.test_result = 'Fail'
+
+    @pytest.fixture(autouse=True)
+    def update_should_submit_test(self, request):
+        if self.issue_key and request.config.getoption(
+                '--submit-tests'):
+            JiraTest.should_submit_test = True
 
     @classmethod
     def setup_class(cls):
@@ -94,9 +101,9 @@ class JiraTest():
 
     @classmethod
     def teardown_class(cls):
-        cls.test_services.create_test_cycle(cls.issue_key + ' Cycle',
-                                            cls.issue_key,
-                                            cls.test_cycle_items)
+        if cls.should_submit_test:
+            cls.test_services.create_test_cycle(cls.issue_key, cls.issue_key,
+                                                cls.test_cycle_items)
 
     def setup_method(self, method):
         self.test_key = self.test_services.create_test(method.__name__,
@@ -107,4 +114,4 @@ class JiraTest():
             'testCaseKey': self.test_key,
             'status': self.test_result
         }
-        self.test_cycle_items.append(json)
+        JiraTest.test_cycle_items.append(json)
