@@ -8,7 +8,6 @@ class TestSimplePlus(JiraTest):
 
     def test_should_calculate_plus_correctly(self):
         assert simple_plus(1, 2) == 3
-        assert False
 
     def test_should_throw_error_when_input_strings(self):
         with pytest.raises(TypeError):

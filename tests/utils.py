@@ -1,5 +1,6 @@
 from datetime import datetime
 from operator import itemgetter
+import pytest
 import requests
 
 
@@ -78,6 +79,13 @@ class JiraTest():
     test_cycle_items = []
     test_services = JiraTestService(jira_settings)
 
+    @pytest.fixture(autouse=True)
+    def get_test_result(self, request):
+        yield
+        self.test_result = 'Pass'
+        if request.node.rep_call.failed:
+            self.test_result = 'Fail'
+
     @classmethod
     def setup_class(cls):
         test_keys_list = cls.test_services.get_tests_in_issue(cls.issue_key)
@@ -95,9 +103,8 @@ class JiraTest():
                                                        self.issue_key)
 
     def teardown_method(self, method):
-        test_result = 'Pass'
         json = {
             'testCaseKey': self.test_key,
-            'status': test_result
+            'status': self.test_result
         }
         self.test_cycle_items.append(json)
