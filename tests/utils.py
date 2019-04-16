@@ -1,3 +1,4 @@
+from datetime import datetime
 from operator import itemgetter
 import requests
 
@@ -8,6 +9,10 @@ jira_settings = {
     'password': 'QC12345678',
     'project_key': 'IAM'
 }
+
+
+def get_current_time():
+    return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
 class JiraTestService():
@@ -57,6 +62,8 @@ class JiraTestService():
             'name': name,
             'projectKey': self.project_key,
             'issueKey': issue_key,
+            'plannedStartDate': get_current_time(),
+            'plannedEndDate': get_current_time(),
             'items': items
         }
         response = requests.post(url=self.url + '/testrun',
