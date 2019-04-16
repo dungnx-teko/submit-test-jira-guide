@@ -76,6 +76,20 @@ class JiraTestService():
 
 
 class JiraTest():
+    """
+    Các Test Suite sẽ kế thừa class này.
+    Một Test Suite sẽ bao gồm nhiều Test Cases và Issue tương ứng.
+    Sau khi chạy một Test Suite, kết quả chạy từng Test Cases sẽ được nhóm lại,
+    tạo trên Jira thành một Test Cycle.
+    Chi tiết luồng:
+        - Before each test: Tạo test.
+        - After each test: Cập nhật kết quả Pass / Fail cho test tương ứng.
+        - After each test suite: Gửi request tạo Test Cycle
+                                ứng với Test Suite đang chạy.
+    Ngoài ra, để không tạo duplicate Test case:
+        - Before each test suite: Xóa hết các Test Case
+                                đang được gắn với Test Suite này.
+    """
     should_submit_test = False
     test_cycle_items = []
     test_services = JiraTestService(jira_settings)
@@ -95,6 +109,10 @@ class JiraTest():
 
     @classmethod
     def setup_class(cls):
+        """
+        Hàm chạy trước mỗi Test Suite.
+        Hàm này xóa tất cả các Test Case còn đang gắn với issue.
+        """
         test_keys_list = cls.test_services.get_tests_in_issue(cls.issue_key)
         for test_key in test_keys_list:
             cls.test_services.delete_test(test_key)
