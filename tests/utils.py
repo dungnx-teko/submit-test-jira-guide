@@ -78,19 +78,22 @@ class JiraTestService():
 class JiraTest():
     """
     Các Test Suite sẽ kế thừa class này.
-    Một Test Suite sẽ bao gồm nhiều Test Cases và Issue tương ứng.
+    Một Test Suite sẽ bao gồm nhiều Test Cases và Issue tương ứng
+        (được định nghĩa qua issue_key).
     Sau khi chạy một Test Suite, kết quả chạy từng Test Cases sẽ được nhóm lại,
-    tạo trên Jira thành một Test Cycle.
+        tạo trên Jira thành một Test Cycle.
     Chi tiết luồng:
-        - Before each test: Tạo test.
-        - After each test: Cập nhật kết quả Pass / Fail cho test tương ứng.
+        - Before each test: Tạo Test Case và gắn với Issue tương ứng.
+        - After each test: Đưa kết quả Pass / Fail test tương ứng
+            vào biến, sử dụng cho bước sau.
         - After each test suite: Gửi request tạo Test Cycle
-                                ứng với Test Suite đang chạy.
+            với kết quả của những Test Cases được lấy ở bước trên.
     Ngoài ra, để không tạo duplicate Test case:
-        - Before each test suite: Xóa hết các Test Case
-                                đang được gắn với Test Suite này.
+        - Before each test suite: Kiểm tra tạo lặp Test Case:
+            Chỉ tạo những Test Case mới,
+            xóa những Test Case không tìm thấy,
+            giữ nguyên những Test Case đã được tạo (cùng tên).
     """
-    should_submit_test = False
     test_cycle_items = []
     test_services = JiraTestService(jira_settings)
 
@@ -98,21 +101,17 @@ class JiraTest():
     def update_test_result(self, request):
         yield
         self.test_result = 'Pass'
-        if request.node.rep_call.failed:
+        if request.node.test_outcome.failed:
             self.test_result = 'Fail'
 
-    @pytest.fixture(autouse=True)
-    def update_should_submit_test(self, request):
-        if self.issue_key and request.config.getoption(
-                '--submit-tests'):
-            JiraTest.should_submit_test = True
+    @pytest.fixture(autouse=True, scope='class')
+    def should_submit_test(self, request):
+        self.should_submit_test = False
+        if self.issue_key and request.config.getoption('--submit-tests'):
+            self.should_submit_test = True
 
     @classmethod
     def setup_class(cls):
-        """
-        Hàm chạy trước mỗi Test Suite.
-        Hàm này xóa tất cả các Test Case còn đang gắn với issue.
-        """
         test_keys_list = cls.test_services.get_tests_in_issue(cls.issue_key)
         for test_key in test_keys_list:
             cls.test_services.delete_test(test_key)
