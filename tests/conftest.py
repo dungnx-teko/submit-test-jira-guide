@@ -9,7 +9,7 @@ from operator import itemgetter
 def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
-    setattr(item, 'rep_' + rep.when, rep)
+    setattr(item, 'test_outcome', rep)
 
 
 def pytest_addoption(parser):
@@ -68,7 +68,7 @@ class JiraTestService():
 
     def create_test_cycle(self, name, issue_key, items):
         json = {
-            'name': name+'-dungnx',
+            'name': name,
             'projectKey': self.project_key,
             'issueKey': issue_key,
             'plannedStartDate': get_current_time(),
@@ -95,18 +95,20 @@ def jira_test_service():
 
 @pytest.fixture(scope='class')
 def jira_test_suite(request, jira_test_service):
-    submit_tests = request.config.getoption('--submit-tests', default=False)
     cls = request.cls
     cls.results = {}
+    submit_tests = request.config.getoption('--submit-tests', default=False)
+    if not cls.issue_key:
+        submit_tests = False
 
-    if submit_tests or True:
+    if submit_tests:
         test_keys_list = jira_test_service.get_tests_in_issue(cls.issue_key)
         for test_key in test_keys_list:
             jira_test_service.delete_test(test_key)
 
     yield
 
-    if submit_tests or True:
+    if submit_tests:
         # create test keys
         for item in cls.results:
             test_key = jira_test_service.create_test(item, cls.issue_key)
@@ -122,5 +124,5 @@ def update_test_result(request):
     name = request.function.__name__
     request.cls.results[name] = {'status': 'Pass'}
     yield
-    if request.node.rep_call.failed:
+    if request.node.test_outcome.failed:
         request.cls.results[name]['status'] = 'Fail'
