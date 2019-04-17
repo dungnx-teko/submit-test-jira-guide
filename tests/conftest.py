@@ -98,7 +98,7 @@ def jira_test_suite(request, jira_test_service):
     cls = request.cls
     cls.results = {}
     submit_tests = request.config.getoption('--submit-tests', default=False)
-    if not cls.issue_key:
+    if not getattr(cls, 'issue_key', None):
         submit_tests = False
 
     if submit_tests:
